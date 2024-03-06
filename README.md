@@ -5,7 +5,7 @@ In order to use this:
   <br><br>-Please download the code zip file, then extract all to get the folder. 
   <br><br>-Remove the given example "following.html" and "followers_1.html" files in the folder.
  <br><br>-Replace them with your own personal "following.html" and "followers_1.html" files given from Instagram 
-  <br><br> (to find this: Download your data from Instagram (through: https://accountscenter.instagram.com/info_and_permissions/?theme=dark) then, extract the zip file into a folder, open that folder, and go in connections -> followers-and-following and your "following.html" and "followers_1.html" files will be found there.) 
+  <br><br> (To find this: Download your data from Instagram (through: https://accountscenter.instagram.com/info_and_permissions/?theme=dark) then, extract the zip file into a folder, open that folder, and go in connections -> followers-and-following and your "following.html" and "followers_1.html" files will be found there.) 
  <br> <br>-With the import of the personalized pyFollowerVsFollowing folder into your chosen IDE, run the followerfollowing.py file.
   
   <h5>The terminal will then output the number of people who do not follow you back and list out their usernames for you.</h5>
