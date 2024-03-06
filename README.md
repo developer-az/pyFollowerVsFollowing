@@ -1,3 +1,4 @@
-### Hi!👋
+### Hi!👋 This is my repository for my Python project that helps find who unfollowed or has stopped following you on Instagram.
 <h1>Youtube video tutorial link: </h1>
-In order to use this, please download the folder. Then remove the given example "following.html" and "followers_1.html" files and replace it with your own. Then run the "followerfollowing.py" python file.
+
+In order to use this, please download the folder. Then remove the given example "following.html" and "followers_1.html" files and replace it with your own personal "following.html" and "followers_1.html" files from Instagram. Then with the use of the "followerfollowing.py" python file, it will output the number of people who don't follow you back and list out their usernames for you.
