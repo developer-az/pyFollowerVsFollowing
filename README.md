@@ -3,7 +3,7 @@
 
 In order to use this: 
   <br><br>-Please download the code zip file, then extract all to get the pyFollowerVsFollowing folder. 
-  <br><br>-Remove the given example "following.html" and "followers_1.html" files from the folder.
+  <br><br>-Remove the given example "following.html" and "followers_1.html" files from the pyFollowerVsFollowing folder.
  <br><br>-Put your own personal "following.html" and "followers_1.html" files given from Instagram into the pyFollowerVsFollowing folder 
   <br><br> (To find this: Download your data from Instagram (through: https://accountscenter.instagram.com/info_and_permissions/?theme=dark) then, extract the zip file into a folder, open that folder, and go in connections -> followers-and-following, and your personal "following.html" and "followers_1.html" files will be found there.) 
  <br> <br>-With the import of the personalized pyFollowerVsFollowing folder into your chosen IDE, run the followerfollowing.py file.
