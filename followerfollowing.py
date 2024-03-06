@@ -24,7 +24,10 @@ if __name__ == "__main__":
     # Find unfollowers
     unfollowers = find_unfollowers(followers, following)
 
+    # Print the number of unfollowers
+    print(f"Number of people you follow who don't follow you back: {len(unfollowers)}")
+    print("--------------------------------------------------------------------------")
     # Print unfollowers
-    print("People you follow who don't follow you back:")
+    print("The list of people you follow who don't follow you back:")
     for username in unfollowers:
         print(username)
