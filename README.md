@@ -6,4 +6,4 @@ In order to use this:
   -replace them with your own personal "following.html" and "followers_1.html" files given from Instagram. 
   -With the import of the pyFollowerVsFollowing colder, in conjunction with your chosen IDE, run the followerfollowing.py file.
   
-  <h3>The terminal will then output the number of people who do not follow you back and list out their usernames for you.</h3>
+  <h5>The terminal will then output the number of people who do not follow you back and list out their usernames for you.</h5>
