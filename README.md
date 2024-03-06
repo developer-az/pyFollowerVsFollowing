@@ -2,7 +2,8 @@
 <h2>Youtube video tutorial link: https://youtu.be/ZugkbNARgnU </h2>
 
 In order to use this: 
-  <br>-please download the folder. Then remove the given example "following.html" and "followers_1.html" files in the folder 
+  <br>-please download the code zip file, then extract all to get the folder. 
+  <br>-Remove the given example "following.html" and "followers_1.html" files in the folder 
   <br>-replace them with your own personal "following.html" and "followers_1.html" files given from Instagram. 
   <br>-With the import of the pyFollowerVsFollowing colder, in conjunction with your chosen IDE, run the followerfollowing.py file.
   
