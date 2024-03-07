@@ -1,4 +1,4 @@
-### Hi!👋 This is my repository for my Python project that helps you find those who unfollowed or have stopped following your account on Instagram.
+### Hi!👋 This is my repository for my Python project that helps you find those who have stopped following your account or just do not follow you back on Instagram.
 <h2>Youtube video tutorial link: https://youtu.be/ZugkbNARgnU </h2>
 
 INSTRUCTIONS: 
