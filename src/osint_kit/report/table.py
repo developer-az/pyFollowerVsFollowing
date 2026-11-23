@@ -11,7 +11,7 @@ from rich.table import Table
 from osint_kit.core.models import Report
 
 
-def render_table(report: Report) -> str:
+def render_table(report: Report, *, width: int = 120) -> str:
     """Render a report as a text table (no ANSI codes, fixed width)."""
     table = Table(
         title=f"osint-kit - {report.plugin}",
@@ -43,7 +43,7 @@ def render_table(report: Report) -> str:
         file=buffer,
         force_terminal=False,
         no_color=True,
-        width=120,
+        width=max(40, width),
         highlight=False,
     )
     console.print(table)

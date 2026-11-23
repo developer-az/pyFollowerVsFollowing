@@ -2,6 +2,9 @@
 
 ``osint-kit <plugin> [plugin args] --format json|csv|md|table --output FILE``
 and ``osint-kit list``. Errors are human-readable and exit non-zero.
+
+``osint-kit`` with no command, or ``osint-kit tui``, starts the interactive
+session in :mod:`osint_kit.tui` instead.
 """
 
 from __future__ import annotations
@@ -11,6 +14,8 @@ import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TextIO
+
+from rich.console import Console
 
 from osint_kit import __version__
 from osint_kit.core.errors import OsintKitError, UsageError
@@ -78,11 +83,12 @@ def build_parser(plugins: Mapping[str, Plugin]) -> argparse.ArgumentParser:
         prog="osint-kit",
         description=(
             "Passive, lawful OSINT toolkit. Analyze data you own or public data "
-            "you name; no authentication is attempted and no rate limit is bypassed."
+            "you name; no authentication is attempted and no rate limit is bypassed. "
+            "Run with no command for the interactive menu."
         ),
     )
     parser.add_argument("--version", action="version", version=f"osint-kit {__version__}")
-    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND", required=True)
+    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     list_parser = subparsers.add_parser(
         "list",
@@ -90,6 +96,13 @@ def build_parser(plugins: Mapping[str, Plugin]) -> argparse.ArgumentParser:
         description="List available plugins and whether they use the network.",
     )
     _add_common_options(list_parser)
+
+    tui_parser = subparsers.add_parser(
+        "tui",
+        help="interactive menu (the same thing as running with no command)",
+        description="Pick a plugin, answer a few questions, read and save the report.",
+    )
+    _add_common_options(tui_parser)
 
     common = argparse.ArgumentParser(add_help=False)
     _add_common_options(common)
@@ -162,6 +175,15 @@ def main(
     except SystemExit as exc:  # argparse already printed usage; keep the code.
         return int(exc.code or 0)
 
+    if options.command is None or options.command == "tui":
+        from osint_kit.tui import run as run_tui
+
+        return run_tui(
+            registry=registry,
+            console=Console(file=out),
+            offline=getattr(options, "offline", False),
+            stderr=err,
+        )
     ctx = context if context is not None else _context_from_options(options, stderr=err)
     try:
         if options.command == "list":
