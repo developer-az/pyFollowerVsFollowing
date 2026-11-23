@@ -1,0 +1,21 @@
+{
+  "objectClassName": "ip network",
+  "handle": "NET-8-8-8-0-1",
+  "startAddress": "8.8.8.0",
+  "endAddress": "8.8.8.255",
+  "ipVersion": "v4",
+  "name": "GOGL",
+  "type": "DIRECT ALLOCATION",
+  "country": "US",
+  "cidr0_cidrs": [{"v4prefix": "8.8.8.0", "length": 24}],
+  "events": [
+    {"eventAction": "registration", "eventDate": "2014-03-14T00:00:00Z"}
+  ],
+  "entities": [
+    {
+      "handle": "GOGL",
+      "roles": ["registrant"],
+      "vcardArray": ["vcard", [["fn", {}, "text", "Google LLC"]]]
+    }
+  ]
+}

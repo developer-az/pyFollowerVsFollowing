@@ -1,0 +1,20 @@
+Return-Path: <bounce@esp.example.net>
+Received: from mx.example.org (mx.example.org [203.0.113.20])
+	by inbox.example.com (Postfix) with ESMTPS id ABC123
+	for <user@example.com>; Tue, 1 Nov 2025 12:00:03 +0000
+Received: from relay.example.org (relay.example.org [203.0.113.10])
+	by mx.example.org with ESMTP id DEF456; Tue, 1 Nov 2025 12:00:02 +0000
+Received: from sender.example.net (sender.example.net [198.51.100.5])
+	by relay.example.org with ESMTP id GHI789; Tue, 1 Nov 2025 12:00:00 +0000
+Authentication-Results: mx.example.org;
+ spf=pass smtp.mailfrom=esp.example.net;
+ dkim=pass header.d=esp.example.net;
+ dmarc=pass header.from=news.example.org
+From: "News" <news@news.example.org>
+To: user@example.com
+Subject: Synthetic header fixture
+Date: Tue, 1 Nov 2025 12:00:01 +0000
+Message-ID: <synthetic-1@news.example.org>
+MIME-Version: 1.0
+
+This is a synthetic message used only by tests.

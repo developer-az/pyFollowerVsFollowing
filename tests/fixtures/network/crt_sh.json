@@ -1,0 +1,6 @@
+[
+  {"common_name": "www.example.com", "name_value": "www.example.com\n*.api.example.com"},
+  {"common_name": "mail.example.com", "name_value": "mail.example.com\nexample.com"},
+  {"common_name": "*.example.com", "name_value": "*.example.com"},
+  {"common_name": "evil-example.com.attacker.test", "name_value": "evil-example.com.attacker.test"}
+]

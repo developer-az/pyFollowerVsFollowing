@@ -1,0 +1,19 @@
+Return-Path: <bounce@esp.example.net>
+Received: from injected.example.org (injected.example.org [198.51.100.99])
+	by mx.third.example with ESMTP id TOP; Tue, 1 Nov 2025 12:00:10 +0000
+Received: from relay.example.org (relay.example.org [203.0.113.10])
+	by mx.second.example with ESMTP id MID; Tue, 1 Nov 2025 12:05:00 +0000
+Received: from sender.example.net (sender.example.net [198.51.100.5])
+	by relay.example.org with ESMTP id BOTTOM; Tue, 1 Nov 2025 12:00:20 +0000
+Authentication-Results: mx.third.example;
+ spf=fail smtp.mailfrom=spoof.example.net;
+ dkim=none;
+ dmarc=fail header.from=news.example.org
+Received-SPF: softfail (example.net: domain of bouncing.example looks suspicious)
+From: "News" <news@news.example.org>
+To: user@example.com
+Subject: Synthetic suspicious header fixture
+Date: Tue, 1 Nov 2025 12:00:31 +0000
+Message-ID: <synthetic-2@news.example.org>
+
+Synthetic body.
