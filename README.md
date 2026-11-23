@@ -47,7 +47,14 @@ flowchart TD
     subgraph CLI
         A[osint-kit CLI<br/>argparse subcommands]
         B[list command]
-        U[Interactive session<br/>osint-kit with no command]
+    end
+
+    subgraph Interactive
+        U[full-screen app<br/>textual]
+        W[line-by-line menu<br/>rich prompts]
+        F1[form from each<br/>plugin parser]
+        U --> F1
+        W --> F1
     end
 
     subgraph Core
@@ -79,8 +86,8 @@ flowchart TD
 
     A --> D
     B --> D
-    U --> D
-    U --> E
+    F1 --> D
+    F1 --> E
     D --> C
     C --> P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8
     P2 & P3 & P8 --> F
@@ -111,7 +118,8 @@ cd pyFollowerVsFollowing
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 source .venv/bin/activate
-pip install -e ".[dev]"     # omit [dev] for runtime only
+pip install -e ".[dev,tui]"   # dev tools + the full-screen app
+# or: pip install -e .        # CLI + the line-by-line menu only
 ```
 
 The console script is `osint-kit`; `python -m osint_kit` is equivalent.
@@ -126,23 +134,64 @@ Not sure which flags a plugin wants? Run `osint-kit` with no command:
 osint-kit            # or: osint-kit tui
 ```
 
+There are two surfaces over the same session.
+
+### Full-screen app
+
+With `textual` installed (`pip install "osint-kit[tui]"`) and a real terminal,
+you get:
+
 ```
-+---------------------------------------------------------------------+
-| osint-kit v0.1.0                                                    |
-| Passive, lawful OSINT on data you own or public data you name.      |
-| No logins, no scraping behind auth, no rate-limit bypass.           |
-+---------------------------------------------------------------------+
+ osint-kit ─────────────────────────────────────────────── v0.1.0
+ ╭──────────────────────────────────────────────────────────────╮
+ │ Passive, lawful OSINT on data you own or public data you name.│
+ │ No logins, no scraping behind auth, no rate-limit bypass.    │
+ ╰──────────────────────────────────────────────────────────────╯
+ What do you want to do?
+ ╭──────────────────────────────────────────────────────────────╮
+ │ 1. social_diff   - See who does not follow you back, and who  │
+ │ 2. domain_recon  - DNS records, subdomains, and email security│
+ │ 3. email_headers - Trace an email's route and check SPF...    │
+ │ ...                                                          │
+ ╰──────────────────────────────────────────────────────────────╯
+ esc Quit
+```
+
+The form is real widgets: text inputs, dropdowns for fixed choices, checkboxes
+for flags, and an "Advanced options" panel that stays collapsed until you want
+it. Results land in a table you can scroll, and the footer always shows the keys
+that work on the current screen.
+
+| Key | Screen | Action |
+| --- | --- | --- |
+| `1`–`8` / arrows / `enter` | plugin list | open a plugin |
+| `ctrl+r` | form | run it |
+| `esc` | form | back to the list |
+| `s` | results | save (Markdown, JSON, or CSV) |
+| `r` | results | fill the form again |
+| `esc` | results | back to the list |
+| `ctrl+p` | anywhere | command palette |
+
+Save opens a small dialog: pick the format, the suggested filename updates its
+extension, edit the path if you want, confirm.
+
+### Line-by-line menu
+
+When `textual` is not installed, stdin is not a terminal, or you pass
+`--plain`, the same session runs as prompts:
+
+```bash
+osint-kit tui --plain
+```
+
+```
 What do you want to do?
   1. social_diff - start here. See who does not follow you back, and...
-  2. domain_recon - DNS records, subdomains, and email security for...
-  3. email_headers - Trace an email's route and check SPF, DKIM, DMARC.
   ...
-  9. Quit
 > 1
 
 +-------------------------------- plugin -----------------------------+
 | social_diff                                                         |
-| See who does not follow you back, and who follows you that you do not.|
 +---------------------------------------------------------------------+
 Where are your followers?
 The followers_*.html file, or the folder that holds your export.
@@ -154,50 +203,30 @@ following.html, or the same export folder.
 
 Compare against an older export?
 Optional. Adds who you gained and who you lost since then.
->                                    (Enter to skip)
+>                                      (Enter to skip)
 
 Change any advanced options?
 > n
-
-                          osint-kit - social_diff
-+--------------+---------+----------+---------------------------------+
-| Category     | Subject | Severity | Summary                         |
-+--------------+---------+----------+---------------------------------+
-| non_follower | dave    | info     | You follow this account but it  |
-|              |         |          | does not follow you back.       |
-| fan          | carol   | info     | This account follows you and    |
-|              |         |          | you do not follow it back.      |
-+--------------+---------+----------+---------------------------------+
-     followers=4 | following=4 | non_followers=1 | fans=1 | mutuals=3
-4 findings (4 info) in 0.00s
-Tip: keep this export. Next month, point the older-export question at it.
-
-What next?
-  1. Save this report
-  2. Run social_diff again
-  3. Back to the menu
-  4. Quit
 ```
 
-What the session does for you:
+Both surfaces work the same way, and both feed the CLI:
 
 - **Finds your export.** If `followers_*.html` and `following.*` are in the
   current folder, `Downloads`, or `Desktop`, it offers them instead of making
   you type a path.
 - **Asks before touching the network.** Network plugins make you confirm the
-  read-only requests first, and `osint-kit tui --offline` refuses to run them at
-  all.
+  read-only requests first, and `--offline` refuses to run them at all.
 - **Keeps the sharp edges out of the way.** Thresholds, log formats, and limits
-  live behind one "advanced options?" question; the defaults are the same ones
-  the CLI uses.
+  live behind one "advanced options" step; the defaults are the ones the CLI
+  uses.
 - **Saves when you want it.** Markdown, JSON, or CSV, with a timestamped
   filename suggested.
 
 The questions are generated from each plugin's own argument parser, so every
-plugin has a form, including ones you write yourself. The session is a front
-end, not a second implementation: it fills the same options the CLI fills and
-calls the same `plugin.run`, so anything you can do interactively you can also
-script with the flags below.
+plugin has a form, including ones you write yourself. Neither front end is a
+second implementation: both fill the same options the CLI fills and call the
+same `plugin.run`, so anything you can do interactively you can also script with
+the flags below.
 
 ---
 
@@ -432,8 +461,8 @@ Rules of the road:
 - Add tests with synthetic fixtures and, for parsers, at least one Hypothesis
   property.
 
-The interactive menu needs nothing from you: it reads `configure_parser` and
-builds a form from the arguments you declared. If a question reads badly, add
+The interactive modes need nothing from you: both read `configure_parser` and
+build a form from the arguments you declared. If a question reads badly, add
 wording in `tui/copy.py` (a label, a hint, or `primary=True` to move an optional
 argument out of "advanced"); there is no second place to keep the inputs in
 sync.
