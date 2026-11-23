@@ -10,11 +10,12 @@ from typing import Any
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import Collapsible, Input, OptionList, Select, Static
+from textual.widgets import Button, Collapsible, Input, OptionList, Select, Static
 
 from osint_kit.core.registry import load_plugins
 from osint_kit.tui import textual_app
 from osint_kit.tui.detect import ExportCandidate
+from osint_kit.tui.picker import FilePickerScreen
 from osint_kit.tui.textual_app import (
     ConsentScreen,
     OsintKitApp,
@@ -316,6 +317,156 @@ def test_app_uses_the_light_theme() -> None:
         assert app.theme == textual_app.OSINT_THEME.name
         assert textual_app.OSINT_THEME.dark is False
         assert app.theme_variables["foreground"].lower() == "#0b3558"
+
+    scenario(body)
+
+
+def test_only_file_questions_get_a_browse_button() -> None:
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        assert form.query_one("#browse-followers", Button)
+        assert form.query_one("#browse-folder-followers", Button)
+
+        app.open_plugin("exif")
+        await pilot.pause()
+        assert isinstance(app.screen, PluginFormScreen)
+        assert app.screen.query_one("#browse-images", Button)
+        assert len(app.screen.query("#browse-dest")) == 0  # a write target, not a source
+
+    scenario(body)
+
+
+def test_picker_fills_a_file_field(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(textual_app, "native_available", lambda: False)
+    monkeypatch.setattr("osint_kit.tui.picker.start_directory", lambda _start: tmp_path)
+    exported = tmp_path / "followers_1.html"
+    exported.write_text("<html></html>", encoding="utf-8")
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        await pilot.click("#browse-followers")
+        await pilot.pause()
+
+        picker = app.screen
+        assert isinstance(picker, FilePickerScreen)
+        listing = picker.query_one("#picker-entries", OptionList)
+        listing.highlighted = 1  # row 0 is "go up"
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert isinstance(app.screen, PluginFormScreen)
+        assert form.query_one("#field-followers", Input).value == str(exported)
+
+    scenario(body)
+
+
+def test_picker_folder_button_returns_the_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(textual_app, "native_available", lambda: False)
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        form.query_one("#field-followers", Input).value = str(tmp_path / "followers_1.html")
+        await pilot.click("#browse-folder-followers")
+        await pilot.pause()
+        assert isinstance(app.screen, FilePickerScreen)
+        await pilot.click("#use-folder")
+        await pilot.pause()
+        assert form.query_one("#field-followers", Input).value == str(tmp_path)
+
+    scenario(body)
+
+
+def test_picker_keeps_earlier_choices(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(textual_app, "native_available", lambda: False)
+    first = tmp_path / "followers_1.html"
+    second = tmp_path / "followers_2.html"
+    first.write_text("x", encoding="utf-8")
+    second.write_text("x", encoding="utf-8")
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        form.query_one("#field-followers", Input).value = str(first)
+        await pilot.click("#browse-followers")
+        await pilot.pause()
+        listing = app.screen.query_one("#picker-entries", OptionList)
+        # folders sort first, then files: [up, followers_1, followers_2]
+        listing.highlighted = 2
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert form.query_one("#field-followers", Input).value == f"{first}; {second}"
+
+    scenario(body)
+
+
+def test_picker_cancel_leaves_the_field_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(textual_app, "native_available", lambda: False)
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        await pilot.click("#browse-followers")
+        await pilot.pause()
+        assert isinstance(app.screen, FilePickerScreen)
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, PluginFormScreen)
+        assert form.query_one("#field-followers", Input).value == ""
+
+    scenario(body)
+
+
+def test_native_dialog_result_reaches_the_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    chosen = tmp_path / "following.html"
+    monkeypatch.setattr(textual_app, "native_available", lambda: True)
+    monkeypatch.setattr(textual_app, "pick_native", lambda *_a, **_kw: (chosen,))
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        form = app.screen
+        assert isinstance(form, PluginFormScreen)
+        await pilot.click("#browse-following")
+        await wait_for(
+            pilot, lambda: form.query_one("#field-following", Input).value == str(chosen)
+        )
+
+    scenario(body)
+
+
+def test_broken_native_dialog_falls_back_to_the_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def explode(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError("Tcl was not installed properly")
+
+    monkeypatch.setattr(textual_app, "native_available", lambda: True)
+    monkeypatch.setattr(textual_app, "pick_native", explode)
+
+    async def body(app: OsintKitApp, pilot: Pilot[None]) -> None:
+        app.open_plugin("social_diff")
+        await pilot.pause()
+        await pilot.click("#browse-followers")
+        await wait_for(pilot, lambda: isinstance(app.screen, FilePickerScreen))
 
     scenario(body)
 

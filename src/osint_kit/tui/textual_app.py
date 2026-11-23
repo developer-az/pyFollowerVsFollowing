@@ -48,6 +48,13 @@ from osint_kit.report import write_report
 from osint_kit.tui.copy import field_copy, group_copy, tagline
 from osint_kit.tui.detect import ExportCandidate, find_exports
 from osint_kit.tui.fields import Answer, Field, iter_fields
+from osint_kit.tui.picker import (
+    FilePickerScreen,
+    Target,
+    native_available,
+    pick_native,
+    target_for,
+)
 from osint_kit.tui.runner import execute, plugin_parser, prepare
 
 SAVE_FORMATS: tuple[tuple[str, str, str], ...] = (
@@ -84,7 +91,7 @@ Screen {
 
 ModalScreen {
     align: center middle;
-    background: $background 60%;
+    background: #0b3558 45%;
 }
 
 * {
@@ -192,6 +199,20 @@ OptionList > .option-list--option-highlighted {
     padding-left: 2;
 }
 
+.path-row {
+    height: auto;
+}
+
+.path-row Input {
+    width: 1fr;
+}
+
+.path-row Button {
+    width: auto;
+    min-width: 0;
+    margin-left: 1;
+}
+
 Input {
     border: tall #d4e0ed;
     background: #f0f3f8;
@@ -292,6 +313,33 @@ DataTable > .datatable--cursor {
 .dialog-actions {
     height: auto;
     align-horizontal: right;
+}
+
+.picker {
+    width: 88;
+    max-height: 90%;
+}
+
+.picker-title {
+    text-style: bold;
+    color: $foreground;
+}
+
+#picker-path {
+    margin: 0 0 1 0;
+    text-style: italic;
+}
+
+#picker-entries {
+    height: 14;
+    border: round #d4e0ed;
+    background: $surface;
+}
+
+#picker-entries > .option-list--option-highlighted {
+    background: $primary;
+    color: #ffffff;
+    text-style: bold;
 }
 """
 
@@ -556,12 +604,19 @@ class PluginFormScreen(Screen[None]):
                 hint = f"{hint} Separate several paths with ;".strip()
         placeholder = hint if compact else wording.example
         input_type: Literal["number", "text"] = "number" if field.kind == "number" else "text"
-        return Input(
+        box = Input(
             placeholder=placeholder,
             value=field.default or "",
             type=input_type,
             id=widget_id,
         )
+        target = target_for(self.plugin.name, field)
+        if target is None:
+            return box
+        buttons: list[Widget] = [Button("Browse…", id=f"browse-{field.dest}")]
+        if target.folder_ok:
+            buttons.append(Button("Folder…", id=f"browse-folder-{field.dest}"))
+        return Horizontal(box, *buttons, classes="path-row")
 
     def on_mount(self) -> None:
         for field in self.fields:
@@ -617,10 +672,83 @@ class PluginFormScreen(Screen[None]):
                 row.display = event.value == field.dest
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "run":
+        button_id = event.button.id or ""
+        if button_id == "run":
             self.action_run()
-        elif event.button.id == "back":
+        elif button_id == "back":
             self.action_go_back()
+        elif button_id.startswith("browse-"):
+            self._browse(button_id)
+
+    # ---------------------------------------------------------------- browsing
+
+    def _browse_field(self, button_id: str) -> tuple[Field, bool] | None:
+        """The field a Browse button belongs to, and whether it wants a folder."""
+        for prefix, folder in (("browse-folder-", True), ("browse-", False)):
+            if not button_id.startswith(prefix):
+                continue
+            dest = button_id[len(prefix) :]
+            field = next((item for item in self.fields if item.dest == dest), None)
+            if field is not None:
+                return field, folder
+        return None
+
+    def _browse(self, button_id: str) -> None:
+        found = self._browse_field(button_id)
+        if found is None:  # pragma: no cover - a button always names a field
+            return
+        field, folder = found
+        target = target_for(self.plugin.name, field)
+        if target is None:  # pragma: no cover - the button implies a target
+            return
+        start = self._start_from(field)
+        if native_available():
+            self._native_browse(field, target, folder, start)
+            return
+        self._open_picker(field, target, start)
+
+    def _start_from(self, field: Field) -> Path | None:
+        """Open the picker where the field already points, if it points anywhere."""
+        widget = self._inputs.get(field.dest)
+        if not isinstance(widget, Input):
+            return None
+        raw = widget.value.split(";")[0].strip()
+        return Path(raw).expanduser() if raw else None
+
+    def _native_browse(
+        self, field: Field, target: Target, folder: bool, start: Path | None
+    ) -> None:
+        """Ask the operating system for a path without blocking the UI."""
+
+        def pick() -> None:
+            try:
+                chosen = pick_native(target, folder=folder, multiple=field.many, start=start)
+            except Exception:  # pragma: no cover - broken Tcl install, or no desktop
+                self.app.call_from_thread(self._open_picker, field, target, start)
+                return
+            self.app.call_from_thread(self._apply_picked, field, chosen)
+
+        self.run_worker(pick, thread=True, group="browse", exclusive=True)
+
+    def _open_picker(self, field: Field, target: Target, start: Path | None) -> None:
+        screen = FilePickerScreen(target, start=start)
+        app_of(self).push_screen(screen, callback=lambda chosen: self._apply_picked(field, chosen))
+
+    def _apply_picked(self, field: Field, chosen: tuple[Path, ...] | None) -> None:
+        """Write what was picked into the field, keeping earlier picks."""
+        if not chosen:
+            return
+        widget = self._inputs.get(field.dest)
+        if not isinstance(widget, Input):
+            return  # pragma: no cover - Browse only sits beside an Input
+        picked = [str(path) for path in chosen]
+        if field.many and not any(path.is_dir() for path in chosen):
+            current = [part.strip() for part in widget.value.split(";") if part.strip()]
+            merged = current + [item for item in picked if item not in current]
+            widget.value = "; ".join(merged)
+        else:
+            widget.value = picked[0]
+        widget.focus()
 
     def action_go_back(self) -> None:
         self.dismiss()

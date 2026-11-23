@@ -162,6 +162,13 @@ for flags, and an "Advanced options" panel that stays collapsed until you want
 it. Results land in a table you can scroll, and the footer always shows the keys
 that work on the current screen.
 
+Every question that reads from disk has a **Browse…** button next to its input,
+so you never have to type a path: on Windows it opens the normal file dialog
+(with a **Folder…** button where a directory is also a valid answer, as with an
+Instagram export), and on any other machine — or if tkinter is missing — it opens
+a small list you drive with the arrow keys and `enter`. Browsing a folder starts
+beside whatever the field already points at.
+
 | Key | Screen | Action |
 | --- | --- | --- |
 | `1`–`8` / arrows / `enter` | plugin list | open a plugin |
