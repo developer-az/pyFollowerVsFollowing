@@ -100,9 +100,18 @@ def build_parser(plugins: Mapping[str, Plugin]) -> argparse.ArgumentParser:
     tui_parser = subparsers.add_parser(
         "tui",
         help="interactive menu (the same thing as running with no command)",
-        description="Pick a plugin, answer a few questions, read and save the report.",
+        description=(
+            "Pick a plugin, answer a few questions, read and save the report. "
+            "Uses the full-screen app when textual is installed and the terminal "
+            "allows it, otherwise a line-by-line menu."
+        ),
     )
     _add_common_options(tui_parser)
+    tui_parser.add_argument(
+        "--plain",
+        action="store_true",
+        help="force the line-by-line menu instead of the full-screen app",
+    )
 
     common = argparse.ArgumentParser(add_help=False)
     _add_common_options(common)
@@ -183,6 +192,7 @@ def main(
             console=Console(file=out),
             offline=getattr(options, "offline", False),
             stderr=err,
+            mode="menu" if getattr(options, "plain", False) else "auto",
         )
     ctx = context if context is not None else _context_from_options(options, stderr=err)
     try:

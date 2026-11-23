@@ -8,16 +8,12 @@ same ``plugin.run`` the command line calls.
 from __future__ import annotations
 
 import argparse
-import contextlib
-import io
-import sys
 import time
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TextIO
 
 from rich.console import Console
 from rich.panel import Panel
@@ -26,12 +22,12 @@ from osint_kit import __version__
 from osint_kit.core.errors import OsintKitError
 from osint_kit.core.models import Report
 from osint_kit.core.plugin import Plugin, PluginContext
-from osint_kit.core.registry import load_plugins
 from osint_kit.report import render_table, write_report
 from osint_kit.tui.copy import FieldCopy, field_copy, group_copy, tagline
-from osint_kit.tui.detect import ExportCandidate, find_exports
-from osint_kit.tui.fields import Answer, Field, iter_fields, to_argv
-from osint_kit.tui.prompt import Choice, Prompter, RichPrompter
+from osint_kit.tui.detect import ExportCandidate
+from osint_kit.tui.fields import Answer, Field, iter_fields
+from osint_kit.tui.prompt import Choice, Prompter
+from osint_kit.tui.runner import execute, plugin_parser, prepare
 
 PRIORITY = ("social_diff",)
 SAVE_FORMATS: tuple[tuple[str, str, str], ...] = (
@@ -172,17 +168,13 @@ class TuiApp:
         )
 
     def _parser(self, plugin: Plugin) -> argparse.ArgumentParser:
-        parser = argparse.ArgumentParser(prog=f"osint-kit {plugin.name}", add_help=False)
-        plugin.configure_parser(parser)
-        return parser
+        return plugin_parser(plugin)
 
     def _execute(self, plugin: Plugin, options: argparse.Namespace) -> Report | None:
         ctx = self.context_factory()
         started = time.perf_counter()
         try:
-            if plugin.network:
-                ctx.announce_network()
-            report = plugin.run(options, ctx)
+            report = execute(plugin, options, ctx)
         except OsintKitError as exc:
             self._error(str(exc), "Nothing was written.")
             return None
@@ -197,20 +189,11 @@ class TuiApp:
         fields: Sequence[Field],
         answers: Mapping[str, Answer],
     ) -> argparse.Namespace | None:
-        argv = to_argv(fields, answers)
-        problem = io.StringIO()
-        with contextlib.redirect_stderr(problem):
-            try:
-                options, _unknown = parser.parse_known_args(argv)
-            except SystemExit:
-                message = "\n".join(
-                    line
-                    for line in problem.getvalue().splitlines()
-                    if line and not line.startswith("usage:")
-                )
-                self._error("Those inputs did not validate.", message)
-                return None
-        return options
+        prepared = prepare(parser, fields, answers)
+        if prepared.error is not None:
+            self._error("Those inputs did not validate.", prepared.error)
+            return None
+        return prepared.options
 
     # ------------------------------------------------------------------ forms
 
@@ -365,32 +348,4 @@ class TuiApp:
         self.console.print(Panel(body, border_style="red", title="stopped"))
 
 
-def run(
-    *,
-    registry: Mapping[str, Plugin] | None = None,
-    console: Console | None = None,
-    prompter: Prompter | None = None,
-    offline: bool = False,
-    stderr: TextIO | None = None,
-    discover_exports: bool = True,
-) -> int:
-    """Start an interactive session. Returns a process exit code."""
-    out = console if console is not None else Console()
-    plugins = (
-        registry
-        if registry is not None
-        else load_plugins(warn=lambda message: out.print(f"[yellow]{message}[/yellow]"))
-    )
-    stream = stderr if stderr is not None else sys.stderr
-    app = TuiApp(
-        registry=plugins,
-        prompter=prompter if prompter is not None else RichPrompter(out),
-        console=out,
-        offline=offline,
-        context_factory=lambda: PluginContext(offline=offline, stderr=stream),
-        exports=find_exports() if discover_exports else [],
-    )
-    return app.run()
-
-
-__all__ = ["SAVE_FORMATS", "TuiApp", "run"]
+__all__ = ["SAVE_FORMATS", "TuiApp"]
