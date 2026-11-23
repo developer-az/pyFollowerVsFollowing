@@ -27,7 +27,7 @@ from osint_kit.core.ratelimit import HostRateLimiter
 from osint_kit.core.robots import RobotsCache
 
 NETWORK_NOTICE = (
-    "osint-kit: network plugin — read-only requests to public services only; "
+    "osint-kit: network plugin - read-only requests to public services only; "
     "no logins, no scraping behind auth, no rate-limit bypass. Use lawfully."
 )
 
