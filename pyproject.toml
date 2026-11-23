@@ -65,6 +65,7 @@ addopts = [
   "--strict-config",
 ]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
   "benchmark: timing comparisons (kept small in CI; see benchmarks/ for the 100k run)",
 ]
