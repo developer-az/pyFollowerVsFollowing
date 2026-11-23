@@ -1,0 +1,10 @@
+Nov  1 12:00:00 host sshd[100]: Failed password for invalid user admin from 192.0.2.44 port 50122 ssh2
+Nov  1 12:00:05 host sshd[101]: Failed password for invalid user admin from 192.0.2.44 port 50123 ssh2
+Nov  1 12:00:11 host sshd[102]: Failed password for root from 192.0.2.44 port 50124 ssh2
+Nov  1 12:00:18 host sshd[103]: Failed password for invalid user test from 192.0.2.44 port 50125 ssh2
+Nov  1 12:00:25 host sshd[104]: Failed password for invalid user oracle from 192.0.2.44 port 50126 ssh2
+Nov  1 12:00:31 host sshd[105]: Failed password for invalid user postgres from 192.0.2.44 port 50127 ssh2
+Nov  1 12:00:40 host sshd[106]: Failed password for invalid user ubuntu from 192.0.2.44 port 50128 ssh2
+Nov  1 12:02:00 host sshd[107]: Accepted publickey for alice from 203.0.113.50 port 41000 ssh2: ED25519 SHA256:abcdef
+Nov  1 12:02:05 host sshd[108]: Invalid user bob from 198.51.100.23
+Nov  1 12:05:00 host systemd[1]: Started Daily apt download activities.

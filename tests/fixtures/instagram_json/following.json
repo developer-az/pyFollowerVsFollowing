@@ -1,0 +1,24 @@
+{
+  "relationships_following": [
+    {
+      "title": "",
+      "string_list_data": [
+        {
+          "href": "https://www.instagram.com/alice",
+          "value": "alice",
+          "timestamp": 1709500000
+        }
+      ]
+    },
+    {
+      "title": "",
+      "string_list_data": [
+        {
+          "href": "https://www.instagram.com/dave",
+          "value": "dave",
+          "timestamp": 1708800000
+        }
+      ]
+    }
+  ]
+}

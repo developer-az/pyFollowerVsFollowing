@@ -1,0 +1,21 @@
+{
+  "objectClassName": "domain",
+  "handle": "2336799_DOMAIN_COM-VRSN",
+  "ldhName": "EXAMPLE.COM",
+  "status": ["client transfer prohibited"],
+  "events": [
+    {"eventAction": "registration", "eventDate": "1995-08-14T04:00:00Z"},
+    {"eventAction": "expiration", "eventDate": "2026-08-13T04:00:00Z"}
+  ],
+  "entities": [
+    {
+      "handle": "376",
+      "roles": ["registrar"],
+      "vcardArray": ["vcard", [["fn", {}, "text", "RESERVED-Internet Assigned Numbers Authority"]]]
+    }
+  ],
+  "nameservers": [
+    {"ldhName": "A.IANA-SERVERS.NET"},
+    {"ldhName": "B.IANA-SERVERS.NET"}
+  ]
+}

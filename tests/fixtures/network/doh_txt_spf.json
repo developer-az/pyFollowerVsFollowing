@@ -1,0 +1,7 @@
+{
+  "Status": 0,
+  "AD": true,
+  "Answer": [
+    {"name": "example.com.", "type": 16, "TTL": 300, "data": "\"v=spf1 include:_spf.example.net -all\""}
+  ]
+}
