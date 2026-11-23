@@ -9,11 +9,14 @@ import httpx
 import pytest
 
 from osint_kit.core.errors import UsageError
+from osint_kit.core.models import Severity
 from osint_kit.plugins.username_check import (
     SITE_KEYS,
     SITES,
     Site,
+    SiteResult,
     UsernameCheckPlugin,
+    blocked_summary,
     check_site,
     evaluate_response,
     guard_url,
@@ -24,24 +27,64 @@ from osint_kit.plugins.username_check import (
 )
 
 
-def test_site_table_is_twenty_unique_sites() -> None:
-    assert len(SITES) == 20
-    assert len(SITE_KEYS) == 20
-    assert len(set(SITE_KEYS)) == 20
+def test_site_table_is_twenty_two_unique_sites() -> None:
+    assert len(SITES) == 22
+    assert len(SITE_KEYS) == 22
+    assert len(set(SITE_KEYS)) == 22
     assert all(site.url_template.startswith("https://") for site in SITES)
+    assert {"youtube", "bluesky"} <= set(SITE_KEYS)
 
 
 def test_evaluate_response_cases() -> None:
     github = next(site for site in SITES if site.key == "github")
     assert evaluate_response(github, 404, "") == ("available", "HTTP 404")
     assert evaluate_response(github, 200, "")[0] == "taken"
-    assert evaluate_response(github, 403, "")[0] == "unknown"
+    assert evaluate_response(github, 403, "") == ("blocked", "HTTP 403")
+    assert evaluate_response(github, 429, "")[0] == "blocked"
     assert evaluate_response(github, 500, "")[0] == "unknown"
 
     hackernews = next(site for site in SITES if site.key == "hackernews")
     verdict, detail = evaluate_response(hackernews, 200, "No such user.")
     assert verdict == "available"
     assert "body marker" in detail
+
+
+def test_youtube_judges_by_status() -> None:
+    youtube = next(site for site in SITES if site.key == "youtube")
+    assert site_url(youtube, "mkbhd") == "https://www.youtube.com/@mkbhd"
+    assert evaluate_response(youtube, 404, "not found")[0] == "available"
+    assert evaluate_response(youtube, 200, "channel")[0] == "taken"
+
+
+def test_bluesky_judges_by_handle_in_the_body() -> None:
+    bluesky = next(site for site in SITES if site.key == "bluesky")
+    found = '{"actors":[{"did":"did:plc:x","handle":"octocat.bsky.social"}]}'
+    custom = '{"actors":[{"did":"did:plc:x","handle":"octocat.dev"}]}'
+    missing = '{"actors":[]}'
+
+    verdict, detail = evaluate_response(bluesky, 200, found, username="octocat")
+    assert verdict == "taken"
+    assert "body marker" in detail
+    assert evaluate_response(bluesky, 200, custom, username="octocat")[0] == "taken"
+    assert evaluate_response(bluesky, 200, found, username="someoneelse")[0] == "available"
+    assert evaluate_response(bluesky, 200, missing, username="octocat")[0] == "available"
+    # a gatekeeping proxy must not turn into "available"
+    assert evaluate_response(bluesky, 403, "", username="octocat")[0] == "blocked"
+
+
+def test_blocked_summary_names_the_hosts() -> None:
+    sites = [next(site for site in SITES if site.key == key) for key in SITE_KEYS[:6]]
+    blocked = [
+        SiteResult(site=site, url="https://example.test", verdict="blocked", status=403)
+        for site in sites
+    ]
+
+    summary = blocked_summary(blocked, 22)
+
+    assert summary.startswith("blocked: 6 of 22 sites refused the request")
+    assert sites[0].label in summary
+    assert "and 2 more" in summary
+    assert "unknown" in summary
 
 
 def test_username_validation_and_urls() -> None:
@@ -107,6 +150,30 @@ def test_plugin_end_to_end(context_factory: Any) -> None:
         if finding.category == "username_status"
     }
     assert verdicts == {"github": "taken", "gitlab": "available", "hackernews": "available"}
+
+
+def test_blocked_sites_collapse_into_one_warning(context_factory: Any) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /\n")
+        if request.url.host == "github.com":
+            return httpx.Response(403, text="go away")
+        return httpx.Response(404, text="missing")
+
+    report = UsernameCheckPlugin().run(
+        argparse.Namespace(username="octocat", sites=["github", "gitlab"], no_robots=False),
+        context_factory(handler),
+    )
+
+    assert report.stats["blocked"] == 1
+    assert report.stats["available"] == 1
+    blocked = [item for item in report.findings if item.details.get("verdict") == "blocked"]
+    assert len(blocked) == 1
+    assert blocked[0].subject == "1 site"
+    assert blocked[0].severity == Severity.LOW
+    assert blocked[0].details["sites"] == {"github": 403}
+    assert all(item.subject != "github" for item in report.findings)
+    assert "GitHub 403" in blocked[0].summary
 
 
 def test_robots_disallow_is_respected(context_factory: Any) -> None:

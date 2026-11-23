@@ -180,7 +180,7 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
         ),
     ),
     "username_check": PluginCopy(
-        tagline="Check whether a username exists on 20 public sites, one request at a time.",
+        tagline="Check whether a username exists on 22 public sites, one request at a time.",
         fields={
             "username": FieldCopy(
                 "Which username?",

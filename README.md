@@ -358,9 +358,13 @@ osint-kit username_check octocat --format table
 osint-kit username_check octocat --site github --site codeberg
 ```
 
-Twenty allowlisted public profile pages, one handle at a time. robots.txt is
+Twenty-two allowlisted public profile pages, one handle at a time. robots.txt is
 checked per host and obeying it is the default. A 200 response is a *hint*, not
 proof of ownership — verify manually.
+
+Sites that refuse a non-browser client (403/406/429 and friends) are not treated
+as "free": they are collapsed into one warning line naming the hosts, because a
+blocked request says nothing either way.
 
 ---
 
@@ -375,7 +379,7 @@ proof of ownership — verify manually.
 | `exif` | Local image bytes | No | Local read; `--strip` writes a sanitised copy. GPS is flagged as medium severity. |
 | `log_analyzer` | Local access/auth logs | No | Streams your logs; no external lookups, no IP enrichment. |
 | `hashing` | Strings/files you supply | No | Local only. |
-| `username_check` | 20 public profile URLs | Yes | Allowlisted hosts only, robots.txt respected, 1 req/s per host, one handle. |
+| `username_check` | 22 public profile URLs | Yes | Allowlisted hosts only, robots.txt respected, 1 req/s per host, one handle. Hosts that block the client are reported as one line, never as "available". |
 
 Output formats: `--format json|csv|md|table` (default `table`), plus
 `--output FILE` to write to disk. JSON is the stable machine format; CSV has
@@ -557,8 +561,10 @@ public handles, but check).
   `string_list_data` JSON shape; unknown shapes fail with a clear error instead
   of silently returning nothing.
 - `username_check` is heuristic and some sites block non-browser clients or
-  serve 200 for missing users. Unknowns are reported as `unknown`, never as
-  "available".
+  serve 200 for missing users. Unknowns are reported as `unknown`, blocked hosts
+  as one `blocked` warning, never as "available". Instagram and TikTok are
+  deliberately absent: both answer 200 with a login wall for handles that do not
+  exist, so a status-code check there would be fiction.
 - EXIF support covers JPEG and PNG, common IFD0/Exif/GPS tags, and both TIFF
   byte orders. BigTIFF, HEIC, and maker notes are out of scope.
 - DNSSEC is inferred from DS/DNSKEY presence and the DoH AD bit, not from a

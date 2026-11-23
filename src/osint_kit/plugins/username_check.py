@@ -18,14 +18,23 @@ from osint_kit.core.errors import UsageError
 from osint_kit.core.models import Report, Severity
 from osint_kit.core.plugin import BasePlugin, PluginContext
 
-Verdict = Literal["taken", "available", "unknown", "skipped"]
+Verdict = Literal["taken", "available", "unknown", "blocked", "skipped"]
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,38}$")
+
+#: Statuses that mean "the host refused to answer", not "the account is missing".
+BLOCKED_STATUSES = frozenset({401, 403, 406, 429, 451, 503})
 
 
 @dataclass(frozen=True)
 class Site:
-    """One allowlisted public profile endpoint."""
+    """One allowlisted public profile endpoint.
+
+    ``missing_markers`` and ``taken_markers`` are searched case-insensitively in
+    the body and may contain ``{u}``, which is replaced with the handle. Set
+    ``body_decides`` for endpoints that answer 200 whatever you ask; the markers
+    then decide, and a 2xx without a match means the handle is free.
+    """
 
     key: str
     label: str
@@ -33,6 +42,8 @@ class Site:
     missing_status: tuple[int, ...] = (404,)
     taken_status: tuple[int, ...] = (200,)
     missing_markers: tuple[str, ...] = ()
+    taken_markers: tuple[str, ...] = ()
+    body_decides: bool = False
     requires_robots: bool = True
     note: str = ""
 
@@ -56,8 +67,17 @@ SITES: tuple[Site, ...] = (
         note="Returns HTTP 200 for missing users; body marker decides.",
     ),
     Site("reddit", "Reddit", "https://www.reddit.com/user/{u}/", requires_robots=True),
+    Site(
+        "bluesky",
+        "Bluesky",
+        "https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q={u}&limit=10",
+        taken_markers=('"handle":"{u}.', '"handle":"{u}"'),
+        body_decides=True,
+        note="Matched on handle prefix; confirm the profile is the one you mean.",
+    ),
     Site("soundcloud", "SoundCloud", "https://soundcloud.com/{u}"),
     Site("vimeo", "Vimeo", "https://vimeo.com/{u}"),
+    Site("youtube", "YouTube", "https://www.youtube.com/@{u}"),
     Site("aboutme", "About.me", "https://about.me/{u}"),
     Site("letterboxd", "Letterboxd", "https://letterboxd.com/{u}/"),
     Site("lastfm", "Last.fm", "https://www.last.fm/user/{u}"),
@@ -105,23 +125,49 @@ def guard_url(site: Site, url: str) -> None:
         raise UsageError(f"refusing to contact {actual!r}; allowlisted host is {expected!r}")
 
 
-def evaluate_response(site: Site, status_code: int, body: str) -> tuple[Verdict, str]:
+def evaluate_response(
+    site: Site, status_code: int, body: str, *, username: str = ""
+) -> tuple[Verdict, str]:
     """Classify one response.
 
-    Missing-user body markers are checked before status so sites that answer
-    200 for everyone (Hacker News) are handled honestly.
+    Body markers are checked before status so sites that answer 200 for everyone
+    (Hacker News) and sites that answer 200 for nobody in particular (Bluesky)
+    are both handled honestly. ``blocked`` is kept apart from ``unknown``: those
+    hosts refused the request, so the run says nothing about the handle.
     """
     lowered = body.casefold()
-    for marker in site.missing_markers:
+
+    def markers(items: tuple[str, ...]) -> list[str]:
+        return [item.format(u=username).casefold() for item in items if item]
+
+    for marker in markers(site.missing_markers):
         if marker in lowered:
             return "available", f"body marker {marker!r}"
+    for marker in markers(site.taken_markers):
+        if marker in lowered:
+            return "taken", f"body marker {marker!r}"
+    if status_code in BLOCKED_STATUSES:
+        return "blocked", f"HTTP {status_code}"
+    if site.body_decides:
+        if 200 <= status_code < 300:
+            return "available", "no matching profile in the body"
+        return "unknown", f"HTTP {status_code}"
     if status_code in site.missing_status:
         return "available", f"HTTP {status_code}"
     if status_code in site.taken_status:
         return "taken", f"HTTP {status_code}"
-    if status_code in {401, 403, 429, 503}:
-        return "unknown", f"HTTP {status_code} (blocked or rate-limited)"
     return "unknown", f"HTTP {status_code}"
+
+
+def blocked_summary(blocked: Sequence[SiteResult], total: int, *, named: int = 4) -> str:
+    """One line naming the hosts that refused the request."""
+    shown = ", ".join(f"{result.site.label} {result.status}" for result in blocked[:named])
+    rest = len(blocked) - named
+    more = f" and {rest} more" if rest > 0 else ""
+    return (
+        f"blocked: {len(blocked)} of {total} sites refused the request "
+        f"({shown}{more}); treat those as unknown."
+    )
 
 
 def check_site(
@@ -133,7 +179,7 @@ def check_site(
     url = site_url(site, username)
     guard_url(site, url)
     status_code, body = fetch(url)
-    verdict, detail = evaluate_response(site, status_code, body)
+    verdict, detail = evaluate_response(site, status_code, body, username=username)
     return SiteResult(site=site, url=url, verdict=verdict, status=status_code, detail=detail)
 
 
@@ -152,10 +198,10 @@ def selected_sites(keys: Sequence[str] | None) -> tuple[Site, ...]:
 
 
 class UsernameCheckPlugin(BasePlugin):
-    """Check a username against 20 public profile pages."""
+    """Check a username against 22 public profile pages."""
 
     NAME = "username_check"
-    SUMMARY = "Check username availability on 20 allowlisted public sites (robots-aware)."
+    SUMMARY = "Check username availability on 22 allowlisted public sites (robots-aware)."
     NETWORK = True
 
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -186,6 +232,7 @@ class UsernameCheckPlugin(BasePlugin):
             },
         )
         client = ctx.http()
+        blocked: list[SiteResult] = []
         for site in sites:
             url = site_url(site, username)
             guard_url(site, url)
@@ -206,7 +253,15 @@ class UsernameCheckPlugin(BasePlugin):
                     "Accept-Language": "en",
                 },
             )
-            verdict, detail = evaluate_response(site, response.status_code, response.text)
+            verdict, detail = evaluate_response(
+                site, response.status_code, response.text, username=username
+            )
+            result = SiteResult(
+                site=site, url=url, verdict=verdict, status=response.status_code, detail=detail
+            )
+            if verdict == "blocked":
+                blocked.append(result)
+                continue
             report.add(
                 category="username_status",
                 subject=site.key,
@@ -221,6 +276,19 @@ class UsernameCheckPlugin(BasePlugin):
                 },
             )
             report.stats[verdict] = report.stats.get(verdict, 0) + 1
+        if blocked:
+            report.add(
+                category="username_status",
+                subject=f"{len(blocked)} site{'' if len(blocked) == 1 else 's'}",
+                summary=blocked_summary(blocked, len(sites)),
+                severity=Severity.LOW,
+                details={
+                    "verdict": "blocked",
+                    "sites": {result.site.key: result.status for result in blocked},
+                    "urls": {result.site.key: result.url for result in blocked},
+                },
+            )
+            report.stats["blocked"] = len(blocked)
         report.stats["sites"] = len(sites)
         report.stats.setdefault("taken", 0)
         report.stats.setdefault("available", 0)
