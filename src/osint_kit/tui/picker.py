@@ -119,9 +119,15 @@ def start_directory(start: Path | None) -> Path:
 _broken = False
 
 
+def _on_windows() -> bool:
+    return sys.platform == "win32"
+
+
 @lru_cache(maxsize=1)
 def _importable() -> bool:
-    if sys.platform != "win32":
+    # The platform check lives in its own function so mypy on Linux does not
+    # narrow it to a constant and call the Windows branch unreachable.
+    if not _on_windows():
         return False
     try:
         import tkinter  # noqa: F401
