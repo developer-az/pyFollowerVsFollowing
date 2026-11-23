@@ -40,6 +40,9 @@ instagram-*.tar.gz
 osint-out/
 *.osint.json
 
+# Screenshot capture scratch (a throwaway Chrome profile)
+docs/screenshots/.chrome-profile/
+
 # Allow the synthetic fixtures that are intentionally committed.
 !tests/fixtures/**/followers*.html
 !tests/fixtures/**/following.html
