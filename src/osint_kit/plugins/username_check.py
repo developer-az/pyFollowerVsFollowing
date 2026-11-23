@@ -75,6 +75,12 @@ SITES: tuple[Site, ...] = (
         body_decides=True,
         note="Matched on handle prefix; confirm the profile is the one you mean.",
     ),
+    Site(
+        "mastodon",
+        "Mastodon",
+        "https://mastodon.social/api/v1/accounts/lookup?acct={u}",
+        note="Checks mastodon.social only; every instance has its own handle space.",
+    ),
     Site("soundcloud", "SoundCloud", "https://soundcloud.com/{u}"),
     Site("vimeo", "Vimeo", "https://vimeo.com/{u}"),
     Site("youtube", "YouTube", "https://www.youtube.com/@{u}"),
@@ -198,10 +204,10 @@ def selected_sites(keys: Sequence[str] | None) -> tuple[Site, ...]:
 
 
 class UsernameCheckPlugin(BasePlugin):
-    """Check a username against 22 public profile pages."""
+    """Check a username against 23 public profile pages."""
 
     NAME = "username_check"
-    SUMMARY = "Check username availability on 22 allowlisted public sites (robots-aware)."
+    SUMMARY = "Check username availability on 23 allowlisted public sites (robots-aware)."
     NETWORK = True
 
     def configure_parser(self, parser: argparse.ArgumentParser) -> None:

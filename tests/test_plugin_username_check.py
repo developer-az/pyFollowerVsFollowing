@@ -27,12 +27,22 @@ from osint_kit.plugins.username_check import (
 )
 
 
-def test_site_table_is_twenty_two_unique_sites() -> None:
-    assert len(SITES) == 22
-    assert len(SITE_KEYS) == 22
-    assert len(set(SITE_KEYS)) == 22
+def test_site_table_is_twenty_three_unique_sites() -> None:
+    assert len(SITES) == 23
+    assert len(SITE_KEYS) == 23
+    assert len(set(SITE_KEYS)) == 23
     assert all(site.url_template.startswith("https://") for site in SITES)
-    assert {"youtube", "bluesky"} <= set(SITE_KEYS)
+    assert {"youtube", "bluesky", "mastodon"} <= set(SITE_KEYS)
+
+
+def test_mastodon_uses_the_lookup_api_not_the_profile_page() -> None:
+    mastodon = next(site for site in SITES if site.key == "mastodon")
+    assert "/api/v1/accounts/lookup?acct=" in mastodon.url_template
+    # the HTML profile page answers 410 to non-browser clients; the API does not
+    assert site_url(mastodon, "MKBHD").endswith("acct=MKBHD")
+    assert evaluate_response(mastodon, 404, '{"error":"Record not found"}')[0] == "available"
+    assert evaluate_response(mastodon, 200, '{"id":"1","acct":"MKBHD"}')[0] == "taken"
+    assert evaluate_response(mastodon, 410, "")[0] == "unknown"
 
 
 def test_evaluate_response_cases() -> None:
@@ -79,9 +89,9 @@ def test_blocked_summary_names_the_hosts() -> None:
         for site in sites
     ]
 
-    summary = blocked_summary(blocked, 22)
+    summary = blocked_summary(blocked, 23)
 
-    assert summary.startswith("blocked: 6 of 22 sites refused the request")
+    assert summary.startswith("blocked: 6 of 23 sites refused the request")
     assert sites[0].label in summary
     assert "and 2 more" in summary
     assert "unknown" in summary

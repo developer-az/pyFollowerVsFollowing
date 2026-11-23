@@ -358,7 +358,7 @@ osint-kit username_check octocat --format table
 osint-kit username_check octocat --site github --site codeberg
 ```
 
-Twenty-two allowlisted public profile pages, one handle at a time. robots.txt is
+Twenty-three allowlisted public profile pages, one handle at a time. robots.txt is
 checked per host and obeying it is the default. A 200 response is a *hint*, not
 proof of ownership — verify manually.
 
@@ -379,7 +379,7 @@ blocked request says nothing either way.
 | `exif` | Local image bytes | No | Local read; `--strip` writes a sanitised copy. GPS is flagged as medium severity. |
 | `log_analyzer` | Local access/auth logs | No | Streams your logs; no external lookups, no IP enrichment. |
 | `hashing` | Strings/files you supply | No | Local only. |
-| `username_check` | 22 public profile URLs | Yes | Allowlisted hosts only, robots.txt respected, 1 req/s per host, one handle. Hosts that block the client are reported as one line, never as "available". |
+| `username_check` | 23 public profile URLs | Yes | Allowlisted hosts only, robots.txt respected, 1 req/s per host, one handle. Hosts that block the client are reported as one line, never as "available". |
 
 Output formats: `--format json|csv|md|table` (default `table`), plus
 `--output FILE` to write to disk. JSON is the stable machine format; CSV has
