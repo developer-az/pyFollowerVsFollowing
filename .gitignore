@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.eggs/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.benchmarks/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Personal social-media exports must never be committed again.
+# Instagram ships followers_1.html, followers_2.html, following.html,
+# plus the JSON variants followers_1.json and following.json.
+followers*.html
+following.html
+followers*.json
+following.json
+connections/followers_and_following/
+instagram-*.zip
+instagram-*.tar.gz
+*instagram*export*.zip
+
+# Local analysis output
+osint-out/
+*.osint.json
+
+# Allow the synthetic fixtures that are intentionally committed.
+!tests/fixtures/**/followers*.html
+!tests/fixtures/**/following.html
+!tests/fixtures/**/followers*.json
+!tests/fixtures/**/following.json
