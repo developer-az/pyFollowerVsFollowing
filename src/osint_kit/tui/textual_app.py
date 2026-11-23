@@ -22,6 +22,7 @@ from textual.binding import BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.screen import ModalScreen, Screen
+from textual.theme import Theme
 from textual.widget import Widget
 from textual.widgets import (
     Button,
@@ -58,33 +59,63 @@ SKIP = "__none__"
 WIDGET = "field-"
 SEVERITY_ORDER = ("high", "medium", "low", "info")
 
+OSINT_THEME = Theme(
+    name="osint-kit",
+    primary="#006bff",
+    secondary="#004eba",
+    accent="#006bff",
+    warning="#b45309",
+    error="#b91c1c",
+    success="#15803d",
+    foreground="#0b3558",
+    background="#f8f9fb",
+    surface="#ffffff",
+    panel="#f0f3f8",
+    dark=False,
+    text_alpha=1.0,
+    luminosity_spread=0.2,
+)
+
 CSS = """
 Screen {
-    background: #f8f9fb;
-    color: #0b3558;
+    background: $background;
+    color: $foreground;
+}
+
+ModalScreen {
+    align: center middle;
+    background: $background 60%;
+}
+
+* {
+    scrollbar-background: transparent;
+    scrollbar-color: #c9d6e5;
+    scrollbar-color-hover: #a6bbd1;
+    scrollbar-color-active: #006bff;
+    scrollbar-size-vertical: 1;
 }
 
 Header {
-    background: #0b3558;
-    color: #ffffff;
+    background: $panel;
+    color: $foreground;
 }
 
 Footer {
-    background: #f0f3f8;
-    color: #476788;
+    background: $panel;
+    color: $foreground;
 }
 
 #hero {
     height: auto;
     margin: 1 2 0 2;
     padding: 1 2;
-    background: #ffffff;
+    background: $surface;
     border: round #d4e0ed;
 }
 
 #brand {
     text-style: bold;
-    color: #0b3558;
+    color: $foreground;
 }
 
 .hint {
@@ -99,25 +130,47 @@ Footer {
 .section {
     margin: 1 2 0 2;
     text-style: bold;
+    color: $foreground;
 }
 
 #plugins {
     height: 1fr;
     margin: 1 2;
     border: round #d4e0ed;
-    background: #ffffff;
+    background: $surface;
+}
+
+OptionList {
+    background: $surface;
+    color: $foreground;
+}
+
+OptionList > .option-list--option {
+    color: $foreground;
+}
+
+OptionList > .option-list--option-hover {
+    background: #e8f1ff;
+    color: $foreground;
+}
+
+OptionList > .option-list--option-highlighted {
+    background: $primary;
+    color: #ffffff;
+    text-style: bold;
 }
 
 #plugin-title {
     text-style: bold;
+    color: $foreground;
 }
 
 #form {
     height: 1fr;
-    margin: 0 2;
-    padding: 0 1;
+    margin: 1 2 0 2;
+    padding: 0 1 1 1;
     border: round #d4e0ed;
-    background: #ffffff;
+    background: $surface;
 }
 
 .field {
@@ -125,8 +178,12 @@ Footer {
     margin: 1 0 0 0;
 }
 
+.field-label {
+    height: auto;
+    color: $foreground;
+}
+
 .field > Label {
-    color: #0b3558;
     text-style: bold;
 }
 
@@ -138,20 +195,44 @@ Footer {
 Input {
     border: tall #d4e0ed;
     background: #f0f3f8;
+    color: $foreground;
 }
 
 Input:focus {
-    border: tall #006bff;
+    border: tall $primary;
+}
+
+Input > .input--placeholder {
+    color: #6b7f95;
 }
 
 Select {
     background: #f0f3f8;
+    color: $foreground;
+}
+
+Collapsible {
+    background: $surface;
+    border: round #d4e0ed;
+    margin-top: 1;
+}
+
+CollapsibleTitle {
+    background: $panel;
+    color: $foreground;
+    text-style: bold;
+    width: 1fr;
+}
+
+CollapsibleTitle:hover {
+    background: #e2eaf5;
 }
 
 #error {
     height: auto;
     margin: 1 2 0 2;
     color: #b91c1c;
+    text-style: bold;
 }
 
 #actions {
@@ -173,20 +254,35 @@ Select {
     height: 1fr;
     margin: 1 2;
     border: round #d4e0ed;
-    background: #ffffff;
+    background: $surface;
+}
+
+DataTable > .datatable--header {
+    background: $panel;
+    color: $foreground;
+    text-style: bold;
+}
+
+DataTable > .datatable--even-row {
+    background: #f7f9fc;
+}
+
+DataTable > .datatable--cursor {
+    background: #e3edff;
+    color: $foreground;
 }
 
 .dialog {
-    width: 70;
+    width: 76;
     height: auto;
     padding: 1 2;
-    background: #ffffff;
-    border: thick #006bff;
+    background: $surface;
+    border: thick $primary;
 }
 
 .dialog Label {
     text-style: bold;
-    color: #0b3558;
+    color: $foreground;
 }
 
 .dialog Input, .dialog Select {
@@ -216,12 +312,14 @@ class OsintKitApp(App[None]):
         context_factory: Callable[[], PluginContext] = PluginContext,
     ) -> None:
         super().__init__()
+        self.register_theme(OSINT_THEME)
         self.registry = registry
         self.offline = offline
         self.exports = list(exports)
         self.context_factory = context_factory
 
     def on_mount(self) -> None:
+        self.theme = OSINT_THEME.name
         self.push_screen(PluginListScreen())
 
     def context(self) -> PluginContext:
@@ -407,10 +505,11 @@ class PluginFormScreen(Screen[None]):
         if bare:
             yield widget
             return
+        line = f"[bold]{wording.label}[/bold]"
+        if wording.hint:
+            line = f"{line}  [dim]{wording.hint}[/dim]"
         with Vertical(classes="field"):
-            yield Label(wording.label)
-            if wording.hint:
-                yield Static(wording.hint, classes="hint")
+            yield Static(line, classes="field-label")
             yield widget
 
     def _group_block(self, group: str) -> ComposeResult:
@@ -450,12 +549,15 @@ class PluginFormScreen(Screen[None]):
             )
         if field.kind == "flag":
             return Checkbox(wording.label, value=False, id=widget_id)
-        hint = wording.hint if compact else ""
-        if field.many:
-            hint = f"{hint} Separate several paths with ;".strip()
+        hint = ""
+        if compact:
+            hint = wording.hint
+            if field.many:
+                hint = f"{hint} Separate several paths with ;".strip()
+        placeholder = hint if compact else wording.example
         input_type: Literal["number", "text"] = "number" if field.kind == "number" else "text"
         return Input(
-            placeholder=hint.strip(),
+            placeholder=placeholder,
             value=field.default or "",
             type=input_type,
             id=widget_id,
@@ -680,7 +782,7 @@ class SaveScreen(ModalScreen[Path | None]):
         self.plugin = plugin
         self.report = report
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.stem = Path.cwd() / f"osint-kit-{plugin.name}-{stamp}"
+        self.stem = f"osint-kit-{plugin.name}-{stamp}"
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog"):

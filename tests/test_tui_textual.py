@@ -311,6 +311,15 @@ def test_detected_export_does_not_break_the_form() -> None:
     asyncio.run(runner())
 
 
+def test_app_uses_the_light_theme() -> None:
+    async def body(app: OsintKitApp, _pilot: Pilot[None]) -> None:
+        assert app.theme == textual_app.OSINT_THEME.name
+        assert textual_app.OSINT_THEME.dark is False
+        assert app.theme_variables["foreground"].lower() == "#0b3558"
+
+    scenario(body)
+
+
 def test_run_fullscreen_builds_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, object] = {}
 

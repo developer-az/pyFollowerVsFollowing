@@ -18,6 +18,7 @@ class FieldCopy:
     label: str
     hint: str = ""
     primary: bool = False
+    example: str = ""
 
 
 @dataclass(frozen=True)
@@ -46,16 +47,19 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
                 "Where are your followers?",
                 "The followers_*.html file, or the folder that holds your export.",
                 primary=True,
+                example="~/Downloads/instagram-export",
             ),
             "following": FieldCopy(
                 "And your following list?",
                 "following.html, or the same export folder.",
                 primary=True,
+                example="~/Downloads/instagram-export/following.html",
             ),
             "previous": FieldCopy(
                 "Compare against an older export?",
                 "Optional. Adds who you gained and who you lost since then.",
                 primary=True,
+                example="~/Downloads/instagram-export-old",
             ),
             "include_mutuals": FieldCopy(
                 "List your mutual follows as well?",
@@ -67,7 +71,12 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
     "domain_recon": PluginCopy(
         tagline="DNS records, subdomains, and email security for a domain you own.",
         fields={
-            "domain": FieldCopy("Which domain?", "For example: example.com", primary=True),
+            "domain": FieldCopy(
+                "Which domain?",
+                "The bare domain, without https://.",
+                primary=True,
+                example="example.com",
+            ),
             "no_ct": FieldCopy(
                 "Skip the certificate-transparency lookup?", "Faster, fewer results."
             ),
@@ -80,7 +89,10 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
         tagline="Registration details for a domain or IP address, from public RDAP.",
         fields={
             "target": FieldCopy(
-                "Domain or IP address?", "For example: example.com or 192.0.2.1", primary=True
+                "Domain or IP address?",
+                "Registration data is public; the query goes to rdap.org.",
+                primary=True,
+                example="example.com",
             ),
             "no_asn": FieldCopy("Skip the ASN lookup for IP addresses?"),
             "max_nameservers": FieldCopy("Most nameservers to list", "Default is 50."),
@@ -94,6 +106,7 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
                 "Which file holds the raw headers?",
                 "Paste the full header block of the message into a .eml or .txt file.",
                 primary=True,
+                example="~/mail/message.eml",
             ),
             "no_hop_findings": FieldCopy("Summarise the hop chain instead of listing every hop?"),
         },
@@ -102,7 +115,12 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
     "exif": PluginCopy(
         tagline="Read or remove metadata such as GPS, camera, and timestamps.",
         fields={
-            "images": FieldCopy("Which image files?", "One or more paths.", primary=True),
+            "images": FieldCopy(
+                "Which image files?",
+                "One or more paths.",
+                primary=True,
+                example="~/Photos/IMG_1234.jpg",
+            ),
             "strip": FieldCopy(
                 "Remove the metadata instead of showing it?", "Writes copies, never edits in place."
             ),
@@ -116,7 +134,10 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
         tagline="Find scanners, bursts, and noisy sources in web or sshd logs.",
         fields={
             "logs": FieldCopy(
-                "Which log files?", "One or more paths. Use - for stdin.", primary=True
+                "Which log files?",
+                "One or more paths. Use - for stdin.",
+                primary=True,
+                example="~/logs/access.log",
             ),
             "log_format": FieldCopy(
                 "How should the log be read?", "Auto-detection is right unless it guesses wrong."
@@ -161,7 +182,12 @@ PLUGIN_COPY: Mapping[str, PluginCopy] = {
     "username_check": PluginCopy(
         tagline="Check whether a username exists on 20 public sites, one request at a time.",
         fields={
-            "username": FieldCopy("Which username?", "For example: someusername", primary=True),
+            "username": FieldCopy(
+                "Which username?",
+                "Letters, digits, dots, and underscores.",
+                primary=True,
+                example="someusername",
+            ),
             "sites": FieldCopy("Limit to one site?", "Default is every allowlisted site."),
             "no_robots": FieldCopy("Ignore robots.txt?", "Not recommended; sites may refuse."),
         },
