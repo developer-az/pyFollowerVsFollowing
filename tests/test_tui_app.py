@@ -317,6 +317,48 @@ def test_run_factory_wires_everything() -> None:
     assert code == 0
 
 
+def test_run_factory_forwards_stderr() -> None:
+    console, _buffer = make()
+    prompter = ScriptedPrompter([("choice", "q")])
+    stream = io.StringIO()
+    code = tui_package.run(
+        registry=load_plugins(),
+        console=console,
+        prompter=prompter,
+        stderr=stream,
+        discover_exports=False,
+    )
+    assert code == 0
+
+
+def test_fullscreen_needs_a_real_terminal() -> None:
+    console, _buffer = make()
+    assert tui_package.fullscreen_available(console) is False
+
+
+def test_fullscreen_available_with_tty(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Tty(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    monkeypatch.setattr("sys.stdin", Tty())
+    monkeypatch.setattr("sys.stdout", Tty())
+    assert tui_package.fullscreen_available() is True
+
+
+def test_run_dispatches_to_the_fullscreen_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, object] = {}
+
+    def fake(plugins: object, **kwargs: object) -> int:
+        seen["plugins"] = plugins
+        seen["kwargs"] = kwargs
+        return 0
+
+    monkeypatch.setattr("osint_kit.tui.textual_app.run_fullscreen", fake)
+    assert tui_package.run(registry=load_plugins(), mode="fullscreen", discover_exports=False) == 0
+    assert "plugins" in seen
+
+
 # ------------------------------------------------------------------ CLI wiring
 
 
