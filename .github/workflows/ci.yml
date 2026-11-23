@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and dev tools
+        run: python -m pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Mypy (strict)
+        run: mypy
+
+      - name: Pytest with coverage
+        run: pytest --cov=osint_kit --cov-report=term-missing --cov-fail-under=80
+
+      - name: CLI smoke test
+        run: |
+          osint-kit list --format json > list.json
+          python -c "import json; data=json.load(open('list.json')); assert data['stats']['plugins'] == 8"
+          python followerfollowing.py --help > /dev/null
+          osint-kit hashing --text abc --format json > /dev/null
