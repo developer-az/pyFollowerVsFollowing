@@ -47,3 +47,6 @@ jobs:
           python -c "import json; data=json.load(open('list.json')); assert data['stats']['plugins'] == 8"
           python followerfollowing.py --help > /dev/null
           osint-kit hashing --text abc --format json > /dev/null
+
+      - name: Interactive smoke test
+        run: printf 'q\n' | osint-kit > /dev/null

@@ -47,6 +47,7 @@ flowchart TD
     subgraph CLI
         A[osint-kit CLI<br/>argparse subcommands]
         B[list command]
+        U[Interactive session<br/>osint-kit with no command]
     end
 
     subgraph Core
@@ -78,6 +79,8 @@ flowchart TD
 
     A --> D
     B --> D
+    U --> D
+    U --> E
     D --> C
     C --> P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8
     P2 & P3 & P8 --> F
@@ -115,10 +118,94 @@ The console script is `osint-kit`; `python -m osint_kit` is equivalent.
 
 ---
 
+## Interactive mode
+
+Not sure which flags a plugin wants? Run `osint-kit` with no command:
+
+```bash
+osint-kit            # or: osint-kit tui
+```
+
+```
++---------------------------------------------------------------------+
+| osint-kit v0.1.0                                                    |
+| Passive, lawful OSINT on data you own or public data you name.      |
+| No logins, no scraping behind auth, no rate-limit bypass.           |
++---------------------------------------------------------------------+
+What do you want to do?
+  1. social_diff - start here. See who does not follow you back, and...
+  2. domain_recon - DNS records, subdomains, and email security for...
+  3. email_headers - Trace an email's route and check SPF, DKIM, DMARC.
+  ...
+  9. Quit
+> 1
+
++-------------------------------- plugin -----------------------------+
+| social_diff                                                         |
+| See who does not follow you back, and who follows you that you do not.|
++---------------------------------------------------------------------+
+Where are your followers?
+The followers_*.html file, or the folder that holds your export.
+> C:\Users\you\Downloads\instagram-export
+
+And your following list?
+following.html, or the same export folder.
+> C:\Users\you\Downloads\instagram-export\following.html
+
+Compare against an older export?
+Optional. Adds who you gained and who you lost since then.
+>                                    (Enter to skip)
+
+Change any advanced options?
+> n
+
+                          osint-kit - social_diff
++--------------+---------+----------+---------------------------------+
+| Category     | Subject | Severity | Summary                         |
++--------------+---------+----------+---------------------------------+
+| non_follower | dave    | info     | You follow this account but it  |
+|              |         |          | does not follow you back.       |
+| fan          | carol   | info     | This account follows you and    |
+|              |         |          | you do not follow it back.      |
++--------------+---------+----------+---------------------------------+
+     followers=4 | following=4 | non_followers=1 | fans=1 | mutuals=3
+4 findings (4 info) in 0.00s
+Tip: keep this export. Next month, point the older-export question at it.
+
+What next?
+  1. Save this report
+  2. Run social_diff again
+  3. Back to the menu
+  4. Quit
+```
+
+What the session does for you:
+
+- **Finds your export.** If `followers_*.html` and `following.*` are in the
+  current folder, `Downloads`, or `Desktop`, it offers them instead of making
+  you type a path.
+- **Asks before touching the network.** Network plugins make you confirm the
+  read-only requests first, and `osint-kit tui --offline` refuses to run them at
+  all.
+- **Keeps the sharp edges out of the way.** Thresholds, log formats, and limits
+  live behind one "advanced options?" question; the defaults are the same ones
+  the CLI uses.
+- **Saves when you want it.** Markdown, JSON, or CSV, with a timestamped
+  filename suggested.
+
+The questions are generated from each plugin's own argument parser, so every
+plugin has a form, including ones you write yourself. The session is a front
+end, not a second implementation: it fills the same options the CLI fills and
+calls the same `plugin.run`, so anything you can do interactively you can also
+script with the flags below.
+
+---
+
 ## Quick start
 
 ```bash
-osint-kit list
+osint-kit                     # interactive menu, no flags to remember
+osint-kit list                # what is installed, and which plugins use the network
 osint-kit list --format md --output plugins.md
 ```
 
@@ -345,6 +432,12 @@ Rules of the road:
 - Add tests with synthetic fixtures and, for parsers, at least one Hypothesis
   property.
 
+The interactive menu needs nothing from you: it reads `configure_parser` and
+builds a form from the arguments you declared. If a question reads badly, add
+wording in `tui/copy.py` (a label, a hint, or `primary=True` to move an optional
+argument out of "advanced"); there is no second place to keep the inputs in
+sync.
+
 ---
 
 ## Development
@@ -399,8 +492,12 @@ set implementation is both identical in output and at least 2× faster.
 
 ## Privacy
 
-- Personal exports are git-ignored and were removed from the tree.
-- If an export was ever committed, purge it from history before publishing:
+- Personal exports are git-ignored and were removed from the tree. The two
+  export files that were committed early in this repository's history contained
+  only placeholder handles (`accountthatfollowsyouback`, `randomaccount`, ...),
+  so no history rewrite was needed for them.
+- If a real export was ever committed under a different name, purge it before
+  publishing:
 
 ```bash
 pip install git-filter-repo
